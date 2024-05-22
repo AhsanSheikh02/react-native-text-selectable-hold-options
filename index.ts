@@ -1,1 +1,6 @@
-export { SelectableText as SelectableText, IHighlights, NativeEvent, SelectableTextProps } from './demo/SelectableText'
+export {
+  SelectableText as SelectableText,
+  IHighlights,
+  NativeEvent,
+  SelectableTextProps,
+} from "./src/SelectableText";
