@@ -4,10 +4,12 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ActionMode;
 import android.view.ActionMode.Callback;
+import android.view.MotionEvent;
 import android.view.View;
 import android.text.Selection;
 import android.text.Spannable;
-import android.view.MotionEvent;
+import android.view.GestureDetector;
+import android.view.GestureDetector.SimpleOnGestureListener;
 
 import java.util.Map;
 
@@ -38,6 +40,24 @@ public class RNSelectableTextManager extends ReactTextViewManager {
     public ReactTextView createViewInstance(ThemedReactContext context) {
         ReactTextView textView = new ReactTextView(context);
 
+        // Gesture detector to detect single taps
+        final GestureDetector gestureDetector = new GestureDetector(context, new SimpleOnGestureListener() {
+            @Override
+            public boolean onSingleTapUp(MotionEvent e) {
+                onSinglePressEvent(textView);
+                return true;
+            }
+        });
+
+        // Set a touch listener to detect single taps and long presses
+        textView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                gestureDetector.onTouchEvent(event);
+                return false; // Allow other touch events to be handled as well
+            }
+        });
+
         // Set a long click listener to handle long press events
         textView.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
@@ -58,12 +78,12 @@ public class RNSelectableTextManager extends ReactTextViewManager {
 
     @ReactProp(name = "menuItems")
     public void setMenuItems(ReactTextView textView, ReadableArray items) {
-        List<String> result = new ArrayList<String>(items.size());
+        List<String> result = new ArrayList<>(items.size());
         for (int i = 0; i < items.size(); i++) {
             result.add(items.getString(i));
         }
 
-        registerSelectionListener(result.toArray(new String[items.size()]), textView);
+        registerSelectionListener(result.toArray(new String[0]), textView);
     }
 
     public void registerSelectionListener(final String[] menuItems, final ReactTextView view) {
@@ -118,8 +138,23 @@ public class RNSelectableTextManager extends ReactTextViewManager {
         );
     }
 
+    public void onSinglePressEvent(ReactTextView view) {
+        WritableMap event = Arguments.createMap();
+
+        // Dispatch
+        ReactContext reactContext = (ReactContext) view.getContext();
+        reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
+                view.getId(),
+                "topSinglePress",
+                event
+        );
+    }
+
     @Override
     public Map getExportedCustomDirectEventTypeConstants() {
-        return MapBuilder.builder().put("topSelection", MapBuilder.of("registrationName", "onSelection")).build();
+        return MapBuilder.builder()
+                .put("topSelection", MapBuilder.of("registrationName", "onSelection"))
+                .put("topSinglePress", MapBuilder.of("registrationName", "onSinglePress"))
+                .build();
     }
 }
