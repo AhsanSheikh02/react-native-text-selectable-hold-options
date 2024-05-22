@@ -4,6 +4,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ActionMode;
 import android.view.ActionMode.Callback;
+import android.view.View;
+import android.text.Selection;
+import android.text.Spannable;
+import android.view.MotionEvent;
 
 import java.util.Map;
 
@@ -22,10 +26,8 @@ import com.facebook.react.views.text.ReactTextViewManager;
 import java.util.List;
 import java.util.ArrayList;
 
-
 public class RNSelectableTextManager extends ReactTextViewManager {
     public static final String REACT_CLASS = "RNSelectableText";
-
 
     @Override
     public String getName() {
@@ -34,9 +36,25 @@ public class RNSelectableTextManager extends ReactTextViewManager {
 
     @Override
     public ReactTextView createViewInstance(ThemedReactContext context) {
-        return new ReactTextView(context);
-    }
+        ReactTextView textView = new ReactTextView(context);
 
+        // Set a long click listener to handle long press events
+        textView.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                int selectionStart = Selection.getSelectionStart(textView.getText());
+                int selectionEnd = Selection.getSelectionEnd(textView.getText());
+                if (selectionStart != -1 && selectionEnd != -1 && selectionStart != selectionEnd) {
+                    String selectedText = textView.getText().toString().substring(selectionStart, selectionEnd);
+                    onSelectNativeEvent(textView, "longPress", selectedText, selectionStart, selectionEnd);
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        return textView;
+    }
 
     @ReactProp(name = "menuItems")
     public void setMenuItems(ReactTextView textView, ReadableArray items) {
@@ -52,13 +70,9 @@ public class RNSelectableTextManager extends ReactTextViewManager {
         view.setCustomSelectionActionModeCallback(new Callback() {
             @Override
             public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-                // Called when action mode is first created. The menu supplied
-                // will be used to generate action buttons for the action mode
-                // Android Smart Linkify feature pushes extra options into the menu
-                // and would override the generated menu items
                 menu.clear();
                 for (int i = 0; i < menuItems.length; i++) {
-                  menu.add(0, i, 0, menuItems[i]);
+                    menu.add(0, i, 0, menuItems[i]);
                 }
                 return true;
             }
@@ -70,10 +84,7 @@ public class RNSelectableTextManager extends ReactTextViewManager {
 
             @Override
             public void onDestroyActionMode(ActionMode mode) {
-                // Called when an action mode is about to be exited and
             }
-
-
 
             @Override
             public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
@@ -88,9 +99,6 @@ public class RNSelectableTextManager extends ReactTextViewManager {
 
                 return true;
             }
-
-
-
         });
     }
 
@@ -112,6 +120,6 @@ public class RNSelectableTextManager extends ReactTextViewManager {
 
     @Override
     public Map getExportedCustomDirectEventTypeConstants() {
-        return MapBuilder.builder().put("topSelection",MapBuilder.of("registrationName","onSelection")).build();
+        return MapBuilder.builder().put("topSelection", MapBuilder.of("registrationName", "onSelection")).build();
     }
 }
